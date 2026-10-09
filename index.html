@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d10">
+<title>IRON CROWN</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; width: 100%;
+    background: #05070a;
+    font-family: 'Courier New', monospace;
+    color: #c9b896;
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+  }
+  #app {
+    position: relative; width: 100vw; height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 100%, #1a1208 0%, #05070a 70%), #05070a;
+  }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .hidden { display: none !important; }
+
+  /* ============ TITLE ============ */
+  #title-screen { align-items: center; justify-content: center; text-align: center; padding: 20px; }
+  .crown {
+    width: 90px; height: 62px; margin-bottom: 20px;
+    background: linear-gradient(#d4af37, #6b4a08);
+    clip-path: polygon(0% 100%, 0% 35%, 15% 50%, 30% 15%, 50% 42%, 70% 15%, 85% 50%, 100% 35%, 100% 100%);
+    filter: drop-shadow(0 0 14px #b8860baa);
+  }
+  #title-screen h1 {
+    font-size: clamp(28px, 9vw, 52px); letter-spacing: 10px;
+    color: #d4af37; font-weight: 700;
+    text-shadow: 0 0 24px #b8860b, 0 2px 4px #000; line-height: 1;
+  }
+  #title-screen h2 {
+    font-size: clamp(9px, 3vw, 14px); letter-spacing: 7px;
+    color: #8a7e6e; margin: 8px 0 40px; font-weight: 400;
+  }
+  .btn {
+    background: linear-gradient(#2e2a24, #1a1612);
+    border: 1.5px solid #b8860b;
+    color: #f0e0c0;
+    font-family: inherit; font-weight: bold;
+    font-size: clamp(14px, 3.8vw, 18px);
+    padding: 15px 44px; border-radius: 4px;
+    letter-spacing: 4px;
+    box-shadow: 0 0 20px #b8860b44, inset 0 0 12px #00000088;
+    cursor: pointer; transition: 0.1s;
+    text-transform: uppercase;
+  }
+  .btn:active { transform: scale(0.96); background: #4a3e2e; }
+  .btn:disabled { opacity: 0.35; pointer-events: none; }
+  .tagline { font-size: 10px; letter-spacing: 4px; color: #5a5248; margin-top: 30px; }
+
+  /* ============ GAME ============ */
+  #game-screen { background: #0a0d10; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 6px;
+    background: linear-gradient(#14100a, #0a0805);
+    border-bottom: 1px solid #3a2a10;
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+  .quit-btn {
+    flex-shrink: 0;
+    background: #1a1612;
+    border: 1px solid #6b4a08;
+    color: #d4af37;
+    font-family: inherit;
+    font-size: 9px;
+    padding: 5px 7px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .quit-btn:active { background: #2e2a24; }
+  .hp-block { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .hp-block.right { align-items: flex-end; }
+  .hp-label {
+    font-size: 8px; letter-spacing: 1.5px; font-weight: bold;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  .hp-block.left .hp-label { color: #7ac0e8; }
+  .hp-block.right .hp-label { color: #e87a7a; }
+  .hp-track {
+    width: 100%; height: 7px;
+    background: #0a0805; border: 1px solid #3a2a10;
+    border-radius: 2px; overflow: hidden;
+  }
+  .hp-fill { height: 100%; transition: width 0.4s ease; }
+  .hp-block.left .hp-fill { background: linear-gradient(90deg, #4a8ab0, #7ac0e8); box-shadow: 0 0 8px #7ac0e888; }
+  .hp-block.right .hp-fill { background: linear-gradient(270deg, #b04a4a, #e87a7a); box-shadow: 0 0 8px #e87a7a88; }
+  .hp-num { font-size: 7px; color: #8a7e6e; letter-spacing: 1px; white-space: nowrap; }
+
+  .pause-btn {
+    flex-shrink: 0; width: 34px; height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #2e2a24, #0a0805);
+    border: 2px solid #b8860b;
+    color: #d4af37; font-size: 13px;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 12px #b8860b66;
+    transition: 0.1s;
+  }
+  .pause-btn:active { transform: scale(0.93); }
+  .pause-btn.paused { background: radial-gradient(circle, #4a2e08, #1a0805); border-color: #e8a87a; color: #e8a87a; }
+
+  /* battlefield canvas */
+  .battlefield-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #battle-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .control-panel {
+    flex-shrink: 0;
+    background: linear-gradient(#0e1114, #08090b);
+    border-top: 1px solid #3a2a10;
+    padding: 5px 6px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .resource-row { display: flex; gap: 4px; font-size: 9px; letter-spacing: 0.6px; }
+  .res {
+    flex: 1; min-width: 0;
+    background: #0a0805; border: 1px solid #2a2018;
+    padding: 4px 6px; border-radius: 3px;
+    color: #8a7e6e;
+    display: flex; justify-content: space-between; align-items: center;
+    white-space: nowrap; overflow: hidden; font-size: 8.5px;
+  }
+  .res .val { color: #d4af37; font-weight: bold; font-size: 9.5px; }
+
+  .crew-row {
+    display: flex; gap: 4px; overflow-x: auto;
+    scrollbar-width: none;
+    min-height: 26px;
+    align-items: center;
+  }
+  .crew-row::-webkit-scrollbar { display: none; }
+  .crew-placeholder { font-size: 7.5px; color: #4a4030; letter-spacing: 1.5px; padding: 3px; }
+
+  .action-row { display: flex; gap: 5px; }
+  .action-row .btn {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    border-radius: 3px;
+    box-shadow: 0 0 8px #b8860b33, inset 0 0 8px #00000088;
+  }
+
+  .status-strip {
+    flex-shrink: 0;
+    background: #05070a;
+    border-top: 1px solid #2a2018;
+    padding: 4px 8px;
+    font-size: 8px;
+    color: #7ac0e8;
+    letter-spacing: 0.5px;
+    height: 22px;
+    line-height: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="title-screen" class="screen">
+    <div class="crown"></div>
+    <h1>IRON CROWN</h1>
+    <h2>THE LAST FORTRESS</h2>
+    <button class="btn" id="play-btn" type="button">▶ PLAY</button>
+    <div class="tagline">ASHLANDS · 1897</div>
+  </div>
+
+  <div id="game-screen" class="screen hidden">
+
+    <div class="topbar">
+      <button class="quit-btn" id="quit-btn" type="button">← QUIT</button>
+      <div class="hp-block left">
+        <div class="hp-label">⌘ IRON CROWN</div>
+        <div class="hp-track"><div class="hp-fill" id="p-hpfill" style="width:100%"></div></div>
+        <div class="hp-num" id="p-hpnum">375 / 375</div>
+      </div>
+      <button class="pause-btn" id="pause-btn" type="button">❚❚</button>
+      <div class="hp-block right">
+        <div class="hp-label">AUREATE · DRAHL</div>
+        <div class="hp-track"><div class="hp-fill" id="e-hpfill" style="width:100%"></div></div>
+        <div class="hp-num" id="e-hpnum">375 / 375</div>
+      </div>
+    </div>
+
+    <div class="battlefield-wrap">
+      <canvas id="battle-canvas"></canvas>
+    </div>
+
+    <div class="control-panel">
+      <div class="resource-row">
+        <div class="res"><span>⛓ IRON</span><span class="val" id="res-iron">80</span></div>
+        <div class="res"><span>♨ STEAM</span><span class="val" id="res-steam">40</span></div>
+        <div class="res"><span>◉ AMMO</span><span class="val" id="res-ammo">12</span></div>
+      </div>
+      <div class="crew-row" id="crew-row">
+        <div class="crew-placeholder">CREW ROW — EMPTY (STAGE 3)</div>
+      </div>
+      <div class="action-row">
+        <button class="btn" id="weapon-btn" type="button" disabled>⚔ SELECT WEAPON</button>
+        <button class="btn" id="repair-btn" type="button" disabled>🔧 REPAIR</button>
+      </div>
+    </div>
+
+    <div class="status-strip" id="status-strip">» Ready.</div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ----- error display -----
+  function showErr(msg){
+    var el = document.getElementById('status-strip');
+    if (el) el.textContent = '⚠ ' + msg;
+    try { console.error(msg); } catch(e){}
+  }
+  window.addEventListener('error', function(ev){
+    showErr(ev.message + ' @ line ' + (ev.lineno||'?'));
+  });
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ----- room definitions -----
+  // Coordinates are NORMALIZED (0..1) of the fortress image.
+  // We'll place these over the compartments visible in the user's image.
+  // Approx positions based on the cutaway layout:
+  var PLAYER_ROOMS = [
+    // name, icon, hp, x0,y0,x1,y1 (normalized to fortress image)
+    { key:'bridge',   name:'COMMAND BRIDGE', icon:'⌘', hp:100, x:0.35, y:0.20, w:0.10, h:0.10 },
+    { key:'gun',      name:'GUN DECK',       icon:'✷', hp:70,  x:0.58, y:0.32, w:0.10, h:0.14 },
+    { key:'boiler',   name:'BOILER ROOM',    icon:'♨', hp:60,  x:0.10, y:0.48, w:0.14, h:0.20 },
+    { key:'workshop', name:'WORKSHOP',       icon:'⚒', hp:50,  x:0.05, y:0.28, w:0.12, h:0.16 },
+    { key:'barracks', name:'BARRACKS',       icon:'⌂', hp:55,  x:0.65, y:0.55, w:0.14, h:0.20 },
+    { key:'aether',   name:'AETHER CHAMBER', icon:'◈', hp:40,  x:0.44, y:0.45, w:0.06, h:0.20, aether:true }
+  ];
+
+  // Enemy uses mirrored layout for now (placeholder image)
+  var ENEMY_ROOMS = PLAYER_ROOMS.map(function(r){
+    return { key:r.key, name:r.name, icon:r.icon, hp:r.hp, aether:r.aether,
+             x:1 - r.x - r.w, y:r.y, w:r.w, h:r.h };
+  });
+
+  var paused = false;
+  var simRunning = false;
+  var playerImg = new Image();
+  var playerImgLoaded = false;
+  var lastFort = null; // last rendered fortress bounds, for tap mapping
+
+  // ----- canvas setup -----
+  var canvas = null;
+  var ctx = null;
+  var W = 0, H = 0, DPR = 1;
+
+  function resizeCanvas(){
+    if (!canvas) return;
+    DPR = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    render();
+  }
+
+  // ----- fortress layout in canvas -----
+  // Left fortress occupies left 40% of canvas, right fortress right 40%.
+  // Each fortress image is drawn to fit its region while preserving aspect.
+  function getFortressBounds(side){
+    var sideW = W * 0.42;
+    var gapW = W - (sideW * 2);
+    var sideX = side === 'player' ? 0 : (W - sideW);
+
+    // Image aspect assumed 16:9 (from user's image). Fit inside sideW × H*0.9
+    var imgAspect = (playerImg.width > 0) ? (playerImg.width / playerImg.height) : 16/9;
+    var maxW = sideW;
+    var maxH = H * 0.92;
+    var drawW = maxW;
+    var drawH = drawW / imgAspect;
+    if (drawH > maxH){
+      drawH = maxH;
+      drawW = drawH * imgAspect;
+    }
+    var drawX = side === 'player' ? (sideW - drawW) : (W - sideW);
+    // vertical center, slightly above middle
+    var drawY = (H - drawH) * 0.5;
+    return { x: drawX, y: drawY, w: drawW, h: drawH };
+  }
+
+  // ----- render -----
+  function render(){
+    if (!ctx) return;
+
+    // sky gradient
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0a0d10');
+    g.addColorStop(0.45, '#1c1208');
+    g.addColorStop(0.75, '#2a1a0a');
+    g.addColorStop(1, '#0a0705');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // horizon glow
+    var hg = ctx.createRadialGradient(W/2, H*0.6, 20, W/2, H*0.6, W*0.6);
+    hg.addColorStop(0, 'rgba(200,110,40,0.20)');
+    hg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(0, 0, W, H);
+
+    // ground strip
+    var groundY = H * 0.86;
+    ctx.fillStyle = '#100c07';
+    ctx.fillRect(0, groundY, W, H - groundY);
+    // ground texture lines
+    ctx.strokeStyle = '#16110a';
+    ctx.lineWidth = 1;
+    for (var gx = 0; gx < W; gx += 10){
+      ctx.beginPath();
+      ctx.moveTo(gx, groundY);
+      ctx.lineTo(gx, H);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#2a2018';
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(W, groundY);
+    ctx.stroke();
+
+    // player fortress
+    var pBounds = getFortressBounds('player');
+    lastFort = { player: pBounds, enemy: getFortressBounds('enemy') };
+
+    if (playerImgLoaded){
+      ctx.drawImage(playerImg, pBounds.x, pBounds.y, pBounds.w, pBounds.h);
+      // placeholder enemy fortress — grey box with matching aspect
+      drawPlaceholderFortress(lastFort.enemy, 'AUREATE');
+    } else {
+      // both placeholders until image loads
+      drawPlaceholderFortress(pBounds, 'IRON CROWN');
+      drawPlaceholderFortress(lastFort.enemy, 'AUREATE');
+    }
+
+    // room overlays
+    drawRooms(pBounds, PLAYER_ROOMS, 'player');
+    drawRooms(lastFort.enemy, ENEMY_ROOMS, 'enemy');
+  }
+
+  function drawPlaceholderFortress(bounds, label){
+    ctx.save();
+    ctx.fillStyle = 'rgba(30,22,16,0.85)';
+    ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+    ctx.strokeStyle = '#3a2a10';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+
+    ctx.fillStyle = '#4a3e2e';
+    ctx.font = 'bold ' + Math.round(bounds.h * 0.06) + 'px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, bounds.x + bounds.w/2, bounds.y + bounds.h/2);
+    ctx.restore();
+  }
+
+  function drawRooms(fortBounds, rooms, side){
+    var isPlayer = side === 'player';
+    for (var i = 0; i < rooms.length; i++){
+      var r = rooms[i];
+      var x = fortBounds.x + r.x * fortBounds.w;
+      var y = fortBounds.y + r.y * fortBounds.h;
+      var w = r.w * fortBounds.w;
+      var h = r.h * fortBounds.h;
+
+      // hitbox outline — subtle
+      var accent = r.aether ? '#a87ac8' : (isPlayer ? '#7ac0e8' : '#e87a7a');
+      ctx.save();
+      ctx.strokeStyle = accent + '99';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+
+      // small label at bottom of room
+      ctx.fillStyle = accent;
+      ctx.font = 'bold ' + Math.max(7, Math.round(h * 0.14)) + 'px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(r.icon + ' ' + r.name.split(' ')[0], x + 3, y + h - 3);
+      ctx.restore();
+    }
+  }
+
+  // ----- tap handling -----
+  function onCanvasTap(ev){
+    if (!ctx || paused || !simRunning) return;
+    var rect = canvas.getBoundingClientRect();
+    var tapX = ((ev.clientX || (ev.touches && ev.touches[0].clientX)) - rect.left);
+    var tapY = ((ev.clientY || (ev.touches && ev.touches[0].clientY)) - rect.top);
+
+    if (!lastFort) return;
+
+    // Check player rooms first
+    var hit = hitTest(lastFort.player, PLAYER_ROOMS, tapX, tapY);
+    if (hit){
+      setStatus('» ' + hit.icon + ' ' + hit.name + ' (' + hit.hp + '/' + hit.hp + ')');
+      return;
+    }
+    // Then enemy rooms
+    var eHit = hitTest(lastFort.enemy, ENEMY_ROOMS, tapX, tapY);
+    if (eHit){
+      setStatus('» ENEMY ' + eHit.icon + ' ' + eHit.name + ' (' + eHit.hp + '/' + eHit.hp + ')');
+      return;
+    }
+    setStatus('» (no room here)');
+  }
+
+  function hitTest(fortBounds, rooms, x, y){
+    for (var i = 0; i < rooms.length; i++){
+      var r = rooms[i];
+      var rx = fortBounds.x + r.x * fortBounds.w;
+      var ry = fortBounds.y + r.y * fortBounds.h;
+      var rw = r.w * fortBounds.w;
+      var rh = r.h * fortBounds.h;
+      // expand by a small margin for easier tapping on mobile
+      var pad = 6;
+      if (x >= rx - pad && x <= rx + rw + pad && y >= ry - pad && y <= ry + rh + pad){
+        return r;
+      }
+    }
+    return null;
+  }
+
+  // ----- state -----
+  function setPaused(p){
+    paused = p;
+    var pb = $('pause-btn');
+    if (pb){
+      pb.textContent = paused ? '▶' : '❚❚';
+      if (paused) pb.classList.add('paused');
+      else pb.classList.remove('paused');
+    }
+  }
+
+  function setStatus(msg){
+    var el = $('status-strip');
+    if (el) el.textContent = msg;
+  }
+
+  function showTitle(){
+    simRunning = false;
+    setPaused(false);
+    $('game-screen').classList.add('hidden');
+    $('title-screen').classList.remove('hidden');
+  }
+
+  function startGame(){
+    try {
+      setPaused(false);
+      setStatus('» Tap a room to see its info.');
+      $('title-screen').classList.add('hidden');
+      $('game-screen').classList.remove('hidden');
+      // small delay so layout settles before sizing canvas
+      setTimeout(function(){
+        resizeCanvas();
+        simRunning = true;
+      }, 50);
+    } catch (err){
+      showErr('startGame: ' + err.message);
+    }
+  }
+
+  // ----- wiring -----
+  function wire(){
+    var play = $('play-btn');
+    var quit = $('quit-btn');
+    var pause = $('pause-btn');
+
+    if (play) play.addEventListener('click', startGame);
+    if (quit) quit.addEventListener('click', showTitle);
+    if (pause) pause.addEventListener('click', function(){
+      if (!simRunning) return;
+      setPaused(!paused);
+      setStatus(paused ? '» Battle paused.' : '» Battle resumed.');
+      render();
+    });
+
+    // tap on canvas
+    canvas = $('battle-canvas');
+    if (canvas){
+      canvas.addEventListener('click', onCanvasTap);
+      canvas.addEventListener('touchend', function(ev){
+        if (ev.changedTouches && ev.changedTouches[0]){
+          var t = ev.changedTouches[0];
+          onCanvasTap({ clientX: t.clientX, clientY: t.clientY });
+          ev.preventDefault();
+        }
+      }, { passive: false });
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', function(){
+      setTimeout(resizeCanvas, 200);
+    });
+  }
+
+  // ----- load fortress image -----
+  playerImg.onload = function(){
+    playerImgLoaded = true;
+    if (ctx) render();
+  };
+  playerImg.onerror = function(){
+    showErr('Could not load fortress-player.png — check filename');
+  };
+  playerImg.src = 'fortress-player.png';
+
+  wire();
+  render();
+
+})();
+</script>
+</body>
+  </html>
