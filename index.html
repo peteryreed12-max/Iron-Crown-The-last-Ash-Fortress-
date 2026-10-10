@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d10">
+<title>IRON CROWN</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; width: 100%;
+    background: #05070a;
+    font-family: 'Courier New', monospace;
+    color: #c9b896;
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+  }
+  #app {
+    position: relative; width: 100vw; height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 100%, #1a1208 0%, #05070a 70%), #05070a;
+  }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .hidden { display: none !important; }
+
+  #title-screen { align-items: center; justify-content: center; text-align: center; padding: 20px; }
+  .crown {
+    width: 90px; height: 62px; margin-bottom: 20px;
+    background: linear-gradient(#d4af37, #6b4a08);
+    clip-path: polygon(0% 100%, 0% 35%, 15% 50%, 30% 15%, 50% 42%, 70% 15%, 85% 50%, 100% 35%, 100% 100%);
+    filter: drop-shadow(0 0 14px #b8860baa);
+  }
+  #title-screen h1 {
+    font-size: clamp(28px, 9vw, 52px); letter-spacing: 10px;
+    color: #d4af37; font-weight: 700;
+    text-shadow: 0 0 24px #b8860b, 0 2px 4px #000; line-height: 1;
+  }
+  #title-screen h2 {
+    font-size: clamp(9px, 3vw, 14px); letter-spacing: 7px;
+    color: #8a7e6e; margin: 8px 0 40px; font-weight: 400;
+  }
+  .btn {
+    background: linear-gradient(#2e2a24, #1a1612);
+    border: 1.5px solid #b8860b;
+    color: #f0e0c0;
+    font-family: inherit; font-weight: bold;
+    font-size: clamp(14px, 3.8vw, 18px);
+    padding: 15px 44px; border-radius: 4px;
+    letter-spacing: 4px;
+    box-shadow: 0 0 20px #b8860b44, inset 0 0 12px #00000088;
+    cursor: pointer; transition: 0.1s;
+    text-transform: uppercase;
+  }
+  .btn:active { transform: scale(0.96); background: #4a3e2e; }
+  .btn:disabled { opacity: 0.35; pointer-events: none; }
+  .tagline { font-size: 10px; letter-spacing: 4px; color: #5a5248; margin-top: 30px; }
+
+  #game-screen { background: #0a0d10; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 6px;
+    background: linear-gradient(#14100a, #0a0805);
+    border-bottom: 1px solid #3a2a10;
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+  .quit-btn {
+    flex-shrink: 0;
+    background: #1a1612;
+    border: 1px solid #6b4a08;
+    color: #d4af37;
+    font-family: inherit;
+    font-size: 9px;
+    padding: 5px 7px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .quit-btn:active { background: #2e2a24; }
+  .hp-block { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .hp-block.right { align-items: flex-end; }
+  .hp-label {
+    font-size: 8px; letter-spacing: 1.5px; font-weight: bold;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  .hp-block.left .hp-label { color: #7ac0e8; }
+  .hp-block.right .hp-label { color: #e87a7a; }
+  .hp-track {
+    width: 100%; height: 7px;
+    background: #0a0805; border: 1px solid #3a2a10;
+    border-radius: 2px; overflow: hidden;
+  }
+  .hp-fill { height: 100%; transition: width 0.4s ease; }
+  .hp-block.left .hp-fill { background: linear-gradient(90deg, #4a8ab0, #7ac0e8); box-shadow: 0 0 8px #7ac0e888; }
+  .hp-block.right .hp-fill { background: linear-gradient(270deg, #b04a4a, #e87a7a); box-shadow: 0 0 8px #e87a7a88; }
+  .hp-num { font-size: 7px; color: #8a7e6e; letter-spacing: 1px; white-space: nowrap; }
+
+  .pause-btn {
+    flex-shrink: 0; width: 34px; height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #2e2a24, #0a0805);
+    border: 2px solid #b8860b;
+    color: #d4af37; font-size: 13px;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 12px #b8860b66;
+    transition: 0.1s;
+  }
+  .pause-btn:active { transform: scale(0.93); }
+  .pause-btn.paused { background: radial-gradient(circle, #4a2e08, #1a0805); border-color: #e8a87a; color: #e8a87a; }
+
+  .battlefield-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #battle-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .control-panel {
+    flex-shrink: 0;
+    background: linear-gradient(#0e1114, #08090b);
+    border-top: 1px solid #3a2a10;
+    padding: 5px 6px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .resource-row { display: flex; gap: 4px; font-size: 9px; letter-spacing: 0.6px; }
+  .res {
+    flex: 1; min-width: 0;
+    background: #0a0805; border: 1px solid #2a2018;
+    padding: 4px 6px; border-radius: 3px;
+    color: #8a7e6e;
+    display: flex; justify-content: space-between; align-items: center;
+    white-space: nowrap; overflow: hidden; font-size: 8.5px;
+  }
+  .res .val { color: #d4af37; font-weight: bold; font-size: 9.5px; }
+
+  .crew-row {
+    display: flex; gap: 4px; overflow-x: auto;
+    scrollbar-width: none;
+    min-height: 26px;
+    align-items: center;
+  }
+  .crew-row::-webkit-scrollbar { display: none; }
+  .crew-placeholder { font-size: 7.5px; color: #4a4030; letter-spacing: 1.5px; padding: 3px; }
+
+  .action-row { display: flex; gap: 5px; }
+  .action-row .btn {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    border-radius: 3px;
+    box-shadow: 0 0 8px #b8860b33, inset 0 0 8px #00000088;
+  }
+
+  .status-strip {
+    flex-shrink: 0;
+    background: #05070a;
+    border-top: 1px solid #2a2018;
+    padding: 4px 8px;
+    font-size: 8px;
+    color: #7ac0e8;
+    letter-spacing: 0.5px;
+    height: 22px;
+    line-height: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="title-screen" class="screen">
+    <div class="crown"></div>
+    <h1>IRON CROWN</h1>
+    <h2>THE LAST FORTRESS</h2>
+    <button class="btn" id="play-btn" type="button">▶ PLAY</button>
+    <div class="tagline">ASHLANDS · 1897</div>
+  </div>
+
+  <div id="game-screen" class="screen hidden">
+
+    <div class="topbar">
+      <button class="quit-btn" id="quit-btn" type="button">← QUIT</button>
+      <div class="hp-block left">
+        <div class="hp-label">⌘ IRON CROWN</div>
+        <div class="hp-track"><div class="hp-fill" id="p-hpfill" style="width:100%"></div></div>
+        <div class="hp-num" id="p-hpnum">375 / 375</div>
+      </div>
+      <button class="pause-btn" id="pause-btn" type="button">❚❚</button>
+      <div class="hp-block right">
+        <div class="hp-label">AUREATE · DRAHL</div>
+        <div class="hp-track"><div class="hp-fill" id="e-hpfill" style="width:100%"></div></div>
+        <div class="hp-num" id="e-hpnum">375 / 375</div>
+      </div>
+    </div>
+
+    <div class="battlefield-wrap">
+      <canvas id="battle-canvas"></canvas>
+    </div>
+
+    <div class="control-panel">
+      <div class="resource-row">
+        <div class="res"><span>⛓ IRON</span><span class="val" id="res-iron">80</span></div>
+        <div class="res"><span>♨ STEAM</span><span class="val" id="res-steam">40</span></div>
+        <div class="res"><span>◉ AMMO</span><span class="val" id="res-ammo">12</span></div>
+      </div>
+      <div class="crew-row" id="crew-row">
+        <div class="crew-placeholder">CREW ROW — EMPTY (STAGE 4)</div>
+      </div>
+      <div class="action-row">
+        <button class="btn" id="weapon-btn" type="button">⚔ FIRE</button>
+        <button class="btn" id="repair-btn" type="button" disabled>🔧 REPAIR (STAGE 4)</button>
+      </div>
+    </div>
+
+    <div class="status-strip" id="status-strip">» Ready.</div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  function showErr(msg){
+    var el = document.getElementById('status-strip');
+    if (el) el.textContent = '⚠ ' + msg;
+    try { console.error(msg); } catch(e){}
+  }
+  window.addEventListener('error', function(ev){
+    showErr(ev.message + ' @ line ' + (ev.lineno||'?'));
+  });
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  var PLAYER_ROOMS = [
+    { key:'workshop', name:'WORKSHOP',       icon:'⚒', hp:50,  maxHp:50,  x:0.02, y:0.10, w:0.20, h:0.28 },
+    { key:'bridge',   name:'COMMAND BRIDGE', icon:'⌘', hp:100, maxHp:100, x:0.24, y:0.08, w:0.16, h:0.22 },
+    { key:'gun',      name:'GUN DECK',       icon:'✷', hp:70,  maxHp:70,  x:0.42, y:0.30, w:0.22, h:0.24 },
+    { key:'boiler',   name:'BOILER ROOM',    icon:'♨', hp:60,  maxHp:60,  x:0.02, y:0.42, w:0.20, h:0.28 },
+    { key:'aether',   name:'AETHER CHAMBER', icon:'◈', hp:40,  maxHp:40,  x:0.24, y:0.34, w:0.14, h:0.24, aether:true },
+    { key:'barracks', name:'BARRACKS',       icon:'⌂', hp:55,  maxHp:55,  x:0.42, y:0.58, w:0.22, h:0.22 }
+  ];
+
+  var ENEMY_ROOMS = [
+    { key:'workshop', name:'WORKSHOP',       icon:'⚒', hp:50,  maxHp:50,  x:0.78, y:0.10, w:0.20, h:0.28 },
+    { key:'bridge',   name:'COMMAND BRIDGE', icon:'⌘', hp:100, maxHp:100, x:0.60, y:0.08, w:0.16, h:0.22 },
+    { key:'gun',      name:'GUN DECK',       icon:'✷', hp:70,  maxHp:70,  x:0.36, y:0.30, w:0.22, h:0.24 },
+    { key:'boiler',   name:'BOILER ROOM',    icon:'♨', hp:60,  maxHp:60,  x:0.78, y:0.42, w:0.20, h:0.28 },
+    { key:'aether',   name:'AETHER CHAMBER', icon:'◈', hp:40,  maxHp:40,  x:0.62, y:0.34, w:0.14, h:0.24, aether:true },
+    { key:'barracks', name:'BARRACKS',       icon:'⌂', hp:55,  maxHp:55,  x:0.36, y:0.58, w:0.22, h:0.22 }
+  ];
+
+  var paused = false;
+  var simRunning = false;
+  var ended = false;
+  var time = 0;
+
+  var playerImg = new Image();
+  var enemyImg = new Image();
+  var playerImgLoaded = false;
+  var enemyImgLoaded = false;
+
+  var canvas = null;
+  var ctx = null;
+  var W = 0, H = 0, DPR = 1;
+  var lastFort = null;
+
+  var playerWeaponTimer = 0;
+  var playerWeaponReload = 2.2;
+  var enemyWeaponTimer = 0;
+  var enemyWeaponReload = 3.0;
+
+  var shells = [];
+  var flashes = [];
+
+  function resizeCanvas(){
+    if (!canvas) return;
+    DPR = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    render();
+  }
+
+  function getFortressBounds(side){
+    var img = side === 'player' ? playerImg : enemyImg;
+    var loaded = side === 'player' ? playerImgLoaded : enemyImgLoaded;
+    var imgAspect = (loaded && img.width > 0) ? (img.width / img.height) : 16/9;
+    var sideW = W * 0.40;
+    var maxW = sideW;
+    var maxH = H * 0.80;
+    var drawW = maxW;
+    var drawH = drawW / imgAspect;
+    if (drawH > maxH){
+      drawH = maxH;
+      drawW = drawH * imgAspect;
+    }
+    var drawX;
+    if (side === 'player') drawX = 0 - (sideW - drawW) * 0.3;
+    else drawX = W - drawW + (sideW - drawW) * 0.3;
+    var drawY = H * 0.5 - drawH * 0.5;
+    return { x: drawX, y: drawY, w: drawW, h: drawH };
+  }
+
+  function render(){
+    if (!ctx) return;
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0a0d10');
+    g.addColorStop(0.40, '#1c1208');
+    g.addColorStop(0.72, '#4a2a10');
+    g.addColorStop(1, '#0a0705');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    var hg = ctx.createRadialGradient(W/2, H*0.68, 20, W/2, H*0.68, W*0.7);
+    hg.addColorStop(0, 'rgba(220,120,40,0.28)');
+    hg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(0, 0, W, H);
+
+    drawSkyline();
+
+    var groundY = H * 0.86;
+    var gg = ctx.createLinearGradient(0, groundY, 0, H);
+    gg.addColorStop(0, '#181008');
+    gg.addColorStop(1, '#050302');
+    ctx.fillStyle = gg;
+    ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.strokeStyle = '#2a2018';
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(W, groundY);
+    ctx.stroke();
+
+    var pBounds = getFortressBounds('player');
+    var eBounds = getFortressBounds('enemy');
+    lastFort = { player: pBounds, enemy: eBounds };
+
+    if (playerImgLoaded){
+      ctx.drawImage(playerImg, pBounds.x, pBounds.y, pBounds.w, pBounds.h);
+    } else {
+      drawPlaceholder(pBounds, 'IRON CROWN');
+    }
+
+    if (enemyImgLoaded){
+      ctx.drawImage(enemyImg, eBounds.x, eBounds.y, eBounds.w, eBounds.h);
+    } else {
+      drawPlaceholder(eBounds, 'AUREATE');
+    }
+
+    drawRoomsOverlay(pBounds, PLAYER_ROOMS, 'player');
+    drawRoomsOverlay(eBounds, ENEMY_ROOMS, 'enemy');
+
+    for (var i = 0; i < shells.length; i++){
+      drawShell(shells[i]);
+    }
+    for (var j = 0; j < flashes.length; j++){
+      drawFlash(flashes[j]);
+    }
+
+    if (paused){
+      ctx.fillStyle = 'rgba(5,7,10,0.55)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#d4af37';
+      ctx.font = 'bold ' + Math.round(H * 0.06) + 'px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PAUSED', W/2, H/2);
+    }
+  }
+
+  function drawSkyline(){
+    var horizon = H * 0.62;
+    ctx.fillStyle = 'rgba(20,10,5,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(0, horizon);
+    var seed = 1;
+    for (var x = 0; x < W; x += 12){
+      seed = (seed * 9301 + 49297) % 233280;
+      var r = seed / 233280;
+      var h = 12 + r * 40;
+      ctx.lineTo(x, horizon - h);
+    }
+    ctx.lineTo(W, horizon);
+    ctx.lineTo(W, horizon + 30);
+    ctx.lineTo(0, horizon + 30);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawPlaceholder(bounds, label){
+    ctx.fillStyle = 'rgba(30,22,16,0.7)';
+    ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+    ctx.strokeStyle = '#3a2a10';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+    ctx.fillStyle = '#4a3e2e';
+    ctx.font = 'bold ' + Math.round(bounds.h * 0.05) + 'px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, bounds.x + bounds.w/2, bounds.y + bounds.h/2);
+  }
+
+  function drawRoomsOverlay(fortBounds, rooms, side){
+    var isPlayer = side === 'player';
+    for (var i = 0; i < rooms.length; i++){
+      var r = rooms[i];
+      var x = fortBounds.x + r.x * fortBounds.w;
+      var y = fortBounds.y + r.y * fortBounds.h;
+      var w = r.w * fortBounds.w;
+      var h = r.h * fortBounds.h;
+      var hpPct = Math.max(0, r.hp / r.maxHp);
+      var accent = r.aether ? '#a87ac8' : (isPlayer ? '#7ac0e8' : '#e87a7a');
+
+      if (hpPct < 1){
+        var dmgAlpha = (1 - hpPct) * 0.5;
+        ctx.fillStyle = 'rgba(120,20,10,' + dmgAlpha + ')';
+        ctx.fillRect(x, y, w, h);
+      }
+
+      ctx.save();
+      ctx.strokeStyle = accent + 'cc';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      var barH = Math.max(3, h * 0.06);
+      ctx.fillStyle = 'rgba(10,8,5,0.8)';
+      ctx.fillRect(x + 2, y + 2, w - 4, barH);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 2, y + 2, (w - 4) * hpPct, barH);
+
+      var labelSize = Math.max(7, Math.round(h * 0.11));
+      ctx.fillStyle = accent;
+      ctx.font = 'bold ' + labelSize + 'px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      var label = r.icon + ' ' + r.name.split(' ')[0];
+      ctx.fillText(label, x + 3, y + h - 3);
+
+      ctx.font = Math.max(6, Math.round(h * 0.09)) + 'px "Courier New", monospace';
+      ctx.fillStyle = 'rgba(200,190,160,0.8)';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(r.hp) + '/' + r.maxHp, x + w - 3, y + h - 3);
+    }
+  }
+
+  function drawShell(s){
+    var t = Math.min(1, s.t / s.dur);
+    var x = s.sx + (s.tx - s.sx) * t;
+    var arc = Math.sin(t * Math.PI) * 30;
+    var y = s.sy + (s.ty - s.sy) * t - arc;
+
+    ctx.fillStyle = 'rgba(255,180,90,0.4)';
+    ctx.beginPath();
+    ctx.arc(x - (s.tx - s.sx) * 0.02, y + 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    var col = s.side === 'player' ? '#ffe0a0' : '#ffb0b0';
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    var gg = ctx.createRadialGradient(x, y, 1, x, y, 12);
+    gg.addColorStop(0, s.side === 'player' ? 'rgba(255,220,140,0.7)' : 'rgba(255,150,150,0.7)');
+    gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath();
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawFlash(f){
+    var t = Math.min(1, f.t / f.dur);
+    var alpha = 1 - t;
+    var size = f.size * (1 + t * 1.5);
+    var gg = ctx.createRadialGradient(f.x, f.y, 1, f.x, f.y, size);
+    gg.addColorStop(0, 'rgba(255,240,190,' + alpha + ')');
+    gg.addColorStop(0.4, f.color.replace('ALPHA', (alpha * 0.6).toFixed(2)));
+    gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // === PART 1 ENDS HERE ===
+  // Do NOT close the script tag. Part 2 continues from this point.
+ 
+  function firePlayerAtRoom(targetIdx){
+    var gun = null;
+    for (var i = 0; i < PLAYER_ROOMS.length; i++){
+      if (PLAYER_ROOMS[i].key === 'gun') gun = PLAYER_ROOMS[i];
+    }
+    var target = ENEMY_ROOMS[targetIdx];
+    if (!gun || !target || target.hp <= 0) return;
+
+    var pB = lastFort.player;
+    var eB = lastFort.enemy;
+
+    var sx = pB.x + (gun.x + gun.w) * pB.w - 10;
+    var sy = pB.y + (gun.y + gun.h * 0.5) * pB.h;
+    var tx = eB.x + (target.x + target.w * 0.5) * eB.w;
+    var ty = eB.y + (target.y + target.h * 0.5) * eB.h;
+
+    shells.push({
+      sx: sx, sy: sy, tx: tx, ty: ty,
+      x: sx, y: sy,
+      t: 0, dur: 0.9,
+      side: 'player',
+      targetIdx: targetIdx,
+      targetSide: 'enemy',
+      dmg: 12
+    });
+
+    flashes.push({
+      x: sx, y: sy,
+      t: 0, dur: 0.35, size: 14,
+      color: 'rgba(255,180,90,ALPHA)'
+    });
+
+    setStatus('» Iron Crown fires at enemy ' + target.name + '.');
+  }
+
+  function fireEnemyAtRandomPlayerRoom(){
+    var gun = null;
+    for (var i = 0; i < ENEMY_ROOMS.length; i++){
+      if (ENEMY_ROOMS[i].key === 'gun') gun = ENEMY_ROOMS[i];
+    }
+    if (!gun || gun.hp <= 0) return;
+
+    var alive = [];
+    for (var j = 0; j < PLAYER_ROOMS.length; j++){
+      if (PLAYER_ROOMS[j].hp > 0) alive.push(j);
+    }
+    if (alive.length === 0) return;
+    var targetIdx = alive[Math.floor(Math.random() * alive.length)];
+    var target = PLAYER_ROOMS[targetIdx];
+
+    var pB = lastFort.player;
+    var eB = lastFort.enemy;
+
+    var sx = eB.x + gun.x * eB.w + 10;
+    var sy = eB.y + (gun.y + gun.h * 0.5) * eB.h;
+    var tx = pB.x + (target.x + target.w * 0.5) * pB.w;
+    var ty = pB.y + (target.y + target.h * 0.5) * pB.h;
+
+    shells.push({
+      sx: sx, sy: sy, tx: tx, ty: ty,
+      x: sx, y: sy,
+      t: 0, dur: 0.9,
+      side: 'enemy',
+      targetIdx: targetIdx,
+      targetSide: 'player',
+      dmg: 10
+    });
+
+    flashes.push({
+      x: sx, y: sy,
+      t: 0, dur: 0.35, size: 14,
+      color: 'rgba(255,120,120,ALPHA)'
+    });
+
+    setStatus('» Aureate fires at our ' + target.name + '.');
+  }
+
+  var lastTickTime = 0;
+  function tick(now){
+    if (!lastTickTime) lastTickTime = now;
+    var dt = Math.min(0.1, (now - lastTickTime) / 1000);
+    lastTickTime = now;
+
+    if (simRunning && !paused && !ended){
+      time += dt;
+
+      playerWeaponTimer += dt;
+      if (playerWeaponTimer >= playerWeaponReload){
+        playerWeaponTimer = 0;
+        var alive = [];
+        for (var i = 0; i < ENEMY_ROOMS.length; i++){
+          if (ENEMY_ROOMS[i].hp > 0) alive.push(i);
+        }
+        if (alive.length > 0){
+          var preferred = -1;
+          for (var k = 0; k < alive.length; k++){
+            if (ENEMY_ROOMS[alive[k]].key === 'gun' || ENEMY_ROOMS[alive[k]].key === 'bridge'){
+              preferred = alive[k]; break;
+            }
+          }
+          var t = (preferred >= 0) ? preferred : alive[Math.floor(Math.random() * alive.length)];
+          firePlayerAtRoom(t);
+        }
+      }
+
+      enemyWeaponTimer += dt;
+      if (enemyWeaponTimer >= enemyWeaponReload){
+        enemyWeaponTimer = 0;
+        fireEnemyAtRandomPlayerRoom();
+      }
+
+      for (var s = shells.length - 1; s >= 0; s--){
+        var sh = shells[s];
+        sh.t += dt;
+        if (sh.t >= sh.dur){
+          var fort = sh.targetSide === 'enemy' ? ENEMY_ROOMS : PLAYER_ROOMS;
+          var fortBounds = sh.targetSide === 'enemy' ? lastFort.enemy : lastFort.player;
+          var target = fort[sh.targetIdx];
+          if (target && target.hp > 0){
+            target.hp = Math.max(0, target.hp - sh.dmg);
+            var px = fortBounds.x + (target.x + target.w * 0.5) * fortBounds.w;
+            var py = fortBounds.y + (target.y + target.h * 0.5) * fortBounds.h;
+            flashes.push({
+              x: px, y: py,
+              t: 0, dur: 0.5, size: 22,
+              color: sh.side === 'player' ? 'rgba(255,220,140,ALPHA)' : 'rgba(255,150,150,ALPHA)'
+            });
+          }
+          shells.splice(s, 1);
+        }
+      }
+
+      for (var f = flashes.length - 1; f >= 0; f--){
+        flashes[f].t += dt;
+        if (flashes[f].t >= flashes[f].dur){
+          flashes.splice(f, 1);
+        }
+      }
+
+      updateHpBars();
+
+      var pBridge = findRoom(PLAYER_ROOMS, 'bridge');
+      var eBridge = findRoom(ENEMY_ROOMS, 'bridge');
+      if (eBridge && eBridge.hp <= 0) endBattle('victory');
+      else if (pBridge && pBridge.hp <= 0) endBattle('defeat');
+    }
+
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function findRoom(rooms, key){
+    for (var i = 0; i < rooms.length; i++){
+      if (rooms[i].key === key) return rooms[i];
+    }
+    return null;
+  }
+
+  function updateHpBars(){
+    var pCur = 0, pMax = 0, eCur = 0, eMax = 0;
+    for (var i = 0; i < PLAYER_ROOMS.length; i++){
+      pCur += PLAYER_ROOMS[i].hp;
+      pMax += PLAYER_ROOMS[i].maxHp;
+    }
+    for (var j = 0; j < ENEMY_ROOMS.length; j++){
+      eCur += ENEMY_ROOMS[j].hp;
+      eMax += ENEMY_ROOMS[j].maxHp;
+    }
+    var pf = $('p-hpfill');
+    var ef = $('e-hpfill');
+    var pn = $('p-hpnum');
+    var en = $('e-hpnum');
+    if (pf) pf.style.width = (pCur / pMax * 100) + '%';
+    if (ef) ef.style.width = (eCur / eMax * 100) + '%';
+    if (pn) pn.textContent = Math.round(pCur) + ' / ' + pMax;
+    if (en) en.textContent = Math.round(eCur) + ' / ' + eMax;
+  }
+
+  function onCanvasTap(clientX, clientY){
+    if (paused || !simRunning || ended) return;
+    var rect = canvas.getBoundingClientRect();
+    var tx = clientX - rect.left;
+    var ty = clientY - rect.top;
+    if (!lastFort) return;
+
+    var hitIdx = hitTest(lastFort.player, PLAYER_ROOMS, tx, ty);
+    if (hitIdx >= 0){
+      var r = PLAYER_ROOMS[hitIdx];
+      setStatus('» Your ' + r.name + ' · ' + Math.round(r.hp) + '/' + r.maxHp + ' HP');
+      return;
+    }
+    var eHit = hitTest(lastFort.enemy, ENEMY_ROOMS, tx, ty);
+    if (eHit >= 0){
+      var er = ENEMY_ROOMS[eHit];
+      setStatus('» Enemy ' + er.name + ' · ' + Math.round(er.hp) + '/' + er.maxHp + ' HP');
+      return;
+    }
+    setStatus('» (no room tapped)');
+  }
+
+  function hitTest(fortBounds, rooms, x, y){
+    for (var i = 0; i < rooms.length; i++){
+      var r = rooms[i];
+      var rx = fortBounds.x + r.x * fortBounds.w;
+      var ry = fortBounds.y + r.y * fortBounds.h;
+      var rw = r.w * fortBounds.w;
+      var rh = r.h * fortBounds.h;
+      if (x >= rx && x <= rx + rw && y >= ry && y <= ry + rh) return i;
+    }
+    return -1;
+  }
+
+  function setPaused(p){
+    paused = p;
+    var pb = $('pause-btn');
+    if (pb){
+      pb.textContent = paused ? '▶' : '❚❚';
+      if (paused) pb.classList.add('paused');
+      else pb.classList.remove('paused');
+    }
+  }
+
+  function setStatus(msg){
+    var el = $('status-strip');
+    if (el) el.textContent = msg;
+  }
+
+  function showTitle(){
+    simRunning = false;
+    ended = false;
+    setPaused(false);
+    $('game-screen').classList.add('hidden');
+    $('title-screen').classList.remove('hidden');
+  }
+
+  function startGame(){
+    try {
+      for (var i = 0; i < PLAYER_ROOMS.length; i++) PLAYER_ROOMS[i].hp = PLAYER_ROOMS[i].maxHp;
+      for (var j = 0; j < ENEMY_ROOMS.length; j++) ENEMY_ROOMS[j].hp = ENEMY_ROOMS[j].maxHp;
+      shells = [];
+      flashes = [];
+      time = 0;
+      playerWeaponTimer = 0;
+      enemyWeaponTimer = 0;
+      ended = false;
+      paused = false;
+      setPaused(false);
+
+      updateHpBars();
+      setStatus('» Battle begins. Iron Crown engaging.');
+
+      $('title-screen').classList.add('hidden');
+      $('game-screen').classList.remove('hidden');
+
+      setTimeout(function(){
+        resizeCanvas();
+        simRunning = true;
+      }, 50);
+    } catch (err){
+      showErr('startGame: ' + err.message);
+    }
+  }
+
+  function endBattle(result){
+    ended = true;
+    simRunning = false;
+    if (result === 'victory'){
+      setStatus('» VICTORY. Enemy Command Bridge destroyed.');
+    } else {
+      setStatus('» DEFEAT. Our Command Bridge has fallen.');
+    }
+  }
+
+  function wire(){
+    var play = $('play-btn');
+    var quit = $('quit-btn');
+    var pause = $('pause-btn');
+
+    if (play) play.addEventListener('click', startGame);
+    if (quit) quit.addEventListener('click', showTitle);
+    if (pause) pause.addEventListener('click', function(){
+      if (!simRunning || ended) return;
+      setPaused(!paused);
+      setStatus(paused ? '» Battle paused.' : '» Battle resumed.');
+    });
+
+    canvas = $('battle-canvas');
+    if (canvas){
+      canvas.addEventListener('click', function(ev){
+        onCanvasTap(ev.clientX, ev.clientY);
+      });
+      canvas.addEventListener('touchend', function(ev){
+        if (ev.changedTouches && ev.changedTouches[0]){
+          var t = ev.changedTouches[0];
+          onCanvasTap(t.clientX, t.clientY);
+          ev.preventDefault();
+        }
+      }, { passive: false });
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', function(){
+      setTimeout(resizeCanvas, 200);
+    });
+  }
+
+  playerImg.onload = function(){ playerImgLoaded = true; render(); };
+  playerImg.onerror = function(){ showErr('Failed to load fortress-player.png'); };
+  playerImg.src = 'fortress-player.png';
+
+  enemyImg.onload = function(){ enemyImgLoaded = true; render(); };
+  enemyImg.onerror = function(){ showErr('Failed to load fortress-enemy.png'); };
+  enemyImg.src = 'fortress-enemy.png';
+
+  wire();
+  requestAnimationFrame(tick);
+
+})();
+</script>
+</body>
+</html>
